@@ -64,7 +64,7 @@ public class Calculator {
         int stringLength = this.textResult.length();
         for (int i = stringLength - 1; i >= 0; i--) {
             char input = this.textResult.charAt(i);
-            char previousInput = (i - 1 > 0) ? this.textResult.charAt(i - 1) : ' ';
+            char previousInput = (i - 1 >= 0) ? this.textResult.charAt(i - 1) : ' ';
             if (operatorList.contains(String.valueOf(input))) {
                 if (input == '-') {
                     if (operatorList.contains(String.valueOf(previousInput)) || previousInput == ' ') {
