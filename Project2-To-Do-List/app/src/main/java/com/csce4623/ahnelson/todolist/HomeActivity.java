@@ -37,6 +37,13 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeComponents();
     }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        refreshToDoRepeater();
+    }
+
     //Set the OnClick Listener for buttons
     void initializeComponents(){
         findViewById(R.id.btnNewNote).setOnClickListener(this);
@@ -54,15 +61,9 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v){
         switch (v.getId()){
-            //If new Note, call createNewNote()
             case R.id.btnNewNote:
                 createNewNote();
                 break;
-            //If delete note, call deleteNewestNote()
-            //case R.id.btnDeleteNote:
-            //    deleteNewestNote();
-            //    break;
-            //This shouldn't happen
             default:
                 break;
         }
@@ -73,7 +74,7 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
                 ToDoProvider.TODO_TABLE_COL_ID,
                 ToDoProvider.TODO_TABLE_COL_TITLE};
 
-        Cursor cursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,null);
+        Cursor cursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,"_ID DESC");
         toDoArrayList.clear();
         try {
             while (cursor.moveToNext()) {
@@ -91,38 +92,10 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
     void createNewNote(){
         ContentValues myCV = new ContentValues();
         myCV.put(ToDoProvider.TODO_TABLE_COL_TITLE,"New Note");
-        myCV.put(ToDoProvider.TODO_TABLE_COL_CONTENT,"Note Content");
+        myCV.put(ToDoProvider.TODO_TABLE_COL_CONTENT,"");
 
         getContentResolver().insert(ToDoProvider.CONTENT_URI,myCV);
         refreshToDoRepeater();
-    }
-
-    //Delete the newest note placed into the database
-    void deleteNewestNote(){
-        //Create the projection for the query
-        String[] projection = {
-                ToDoProvider.TODO_TABLE_COL_ID,
-                ToDoProvider.TODO_TABLE_COL_TITLE,
-                ToDoProvider.TODO_TABLE_COL_CONTENT};
-
-        //Perform the query, with ID Descending
-        Cursor myCursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,"_ID DESC");
-        if(myCursor != null & myCursor.getCount() > 0) {
-            //Move the cursor to the beginning
-            myCursor.moveToFirst();
-            //Get the ID (int) of the newest note (column 0)
-            int newestId = myCursor.getInt(0);
-            //Delete the note
-            int didWork = getContentResolver().delete(Uri.parse(ToDoProvider.CONTENT_URI + "/" + newestId), null, null);
-            //If deleted, didWork returns the number of rows deleted (should be 1)
-            if (didWork == 1) {
-                //If it didWork, then create a Toast Message saying that the note was deleted
-                Toast.makeText(getApplicationContext(), "Deleted Note " + newestId, Toast.LENGTH_LONG).show();
-            }
-        } else{
-            Toast.makeText(getApplicationContext(), "No Note to delete!", Toast.LENGTH_LONG).show();
-
-        }
     }
 
 }

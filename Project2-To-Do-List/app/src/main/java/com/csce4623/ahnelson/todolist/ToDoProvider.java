@@ -29,13 +29,19 @@ public class ToDoProvider extends ContentProvider {
     public static final String TODO_TABLE_COL_ID = "_ID";
     public static final String TODO_TABLE_COL_TITLE = "TITLE";
     public static final String TODO_TABLE_COL_CONTENT = "CONTENT";
+    public static final String TODO_TABLE_COL_DATE = "DATE";
+    public static final String TODO_TABLE_COL_DONE = "DONE";
+
     //Table create string based on column names
     private static final String SQL_CREATE_MAIN = "CREATE TABLE " +
             TABLE_NAME+ " " +                       // Table's name
             "(" +                           // The columns in the table
             TODO_TABLE_COL_ID + " INTEGER PRIMARY KEY, " +
             TODO_TABLE_COL_TITLE + " TEXT," +
-            TODO_TABLE_COL_CONTENT + " TEXT)";
+            TODO_TABLE_COL_CONTENT + " TEXT," +
+            TODO_TABLE_COL_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now'))," +
+            TODO_TABLE_COL_DONE + " INTEGER NOT NULL DEFAULT 0" +
+            ")";
 
     //URI Matcher object to facilitate switch cases between URIs
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
