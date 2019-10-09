@@ -39,7 +39,7 @@ public class ToDoProvider extends ContentProvider {
             TODO_TABLE_COL_ID + " INTEGER PRIMARY KEY, " +
             TODO_TABLE_COL_TITLE + " TEXT," +
             TODO_TABLE_COL_CONTENT + " TEXT," +
-            TODO_TABLE_COL_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now'))," +
+            TODO_TABLE_COL_DATE + " LONG NOT NULL DEFAULT 0," +
             TODO_TABLE_COL_DONE + " INTEGER NOT NULL DEFAULT 0" +
             ")";
 
