@@ -20,7 +20,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <receiver android:name="com.csce4623.ahnelson.todolist.AlarmReceiver" />
         <provider
             android:name=".ToDoProvider"
             android:authorities="com.csce4623.ahnelson.todolist.todoprovider"

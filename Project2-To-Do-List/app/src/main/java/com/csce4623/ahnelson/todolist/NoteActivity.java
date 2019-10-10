@@ -12,9 +12,9 @@ import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -31,10 +31,9 @@ import java.time.ZonedDateTime;
 
 public class NoteActivity extends AppCompatActivity implements View.OnClickListener{
 
-    private long noteIndex;
     TimePickerDialog.OnTimeSetListener mOnTimeSetListener;
     DatePickerDialog.OnDateSetListener mOnDateSetListener;
-    int dueYear, dueMonth, dueDayOfMonth, dueHrs, dueMin;
+    int noteIndex, dueYear, dueMonth, dueDayOfMonth, dueHrs, dueMin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +76,6 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     void loadThisNote() {
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID,
@@ -87,10 +85,10 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
                 ToDoProvider.TODO_TABLE_COL_DATE};
 
         Intent homeIntent = getIntent();
-        noteIndex = homeIntent.getLongExtra("noteIndex", -1);
+        noteIndex = homeIntent.getIntExtra("noteIndex", -1);
         Cursor cursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,"_ID DESC");
         cursor.moveToFirst();
-        cursor.move((int) noteIndex);
+        cursor.move(noteIndex);
 
         String title = cursor.getString(cursor.getColumnIndexOrThrow(ToDoProvider.TODO_TABLE_COL_TITLE));
         String content = cursor.getString(cursor.getColumnIndexOrThrow(ToDoProvider.TODO_TABLE_COL_CONTENT));
@@ -107,7 +105,6 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         doneInput.setChecked(done != 0);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     void loadDate(long dueMs) {
         ZonedDateTime dateTime;
         if (dueMs > 0) {
@@ -128,7 +125,6 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         changeDateButton.setText(dueMonth+"/"+dueDayOfMonth+"/"+dueYear);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     void saveThisNote(){
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID};
@@ -136,7 +132,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         Cursor cursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,"_ID DESC");
         if(cursor != null & cursor.getCount() > 0) {
             cursor.moveToFirst();
-            cursor.move((int) noteIndex);
+            cursor.move(noteIndex);
             int noteId = cursor.getInt(0);
 
             EditText titleInput = findViewById(R.id.tvNoteTitle);
@@ -157,7 +153,11 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
 
             int didWork = getContentResolver().update(Uri.parse(ToDoProvider.CONTENT_URI + "/" + noteId), myCV, null, null);
             if (didWork == 1) {
-                createAlarm();
+                long msFromNow = dueMs - System.currentTimeMillis();
+                if (!doneInput.isChecked()) {
+                    scheduleNotification(NoteActivity.this, SystemClock.elapsedRealtime() + msFromNow,
+                            noteId, String.valueOf(titleInput.getText()));
+                }
                 finish();
             }
         } else{
@@ -165,12 +165,15 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    void createAlarm() {
-        Intent intent = new Intent(NoteActivity.this, AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(getBaseContext(), (int) noteIndex, intent, 0);
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        alarmManager.set(AlarmManager.RTC_WAKEUP, targetCal.getTimeInMillis(), pendingIntent);
+    public void scheduleNotification(Context context, long elapsedFutureMs, int noteId, String noteTitle) {
+        if (elapsedFutureMs > SystemClock.elapsedRealtime()) {
+            AlarmManager alarmMgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            Intent intent = new Intent(context, AlarmReceiver.class);
+            intent.putExtra("noteId", noteId);
+            intent.putExtra("noteTitle", noteTitle);
+            PendingIntent alarmIntent = PendingIntent.getBroadcast(context, noteId, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            alarmMgr.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, elapsedFutureMs, alarmIntent);
+        }
     }
 
     void deleteThisNote(){
