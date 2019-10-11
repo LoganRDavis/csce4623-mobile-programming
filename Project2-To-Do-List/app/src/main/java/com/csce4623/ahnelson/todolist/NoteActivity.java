@@ -9,12 +9,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -24,6 +27,12 @@ import android.widget.Toast;
 import android.widget.TimePicker;
 import android.graphics.Color;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -76,6 +85,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //Loads in note
     void loadThisNote() {
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID,
@@ -105,6 +115,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         doneInput.setChecked(done != 0);
     }
 
+    //Loads in date from ms stored in content provider
     void loadDate(long dueMs) {
         ZonedDateTime dateTime;
         if (dueMs > 0) {
@@ -125,6 +136,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         changeDateButton.setText(dueMonth+"/"+dueDayOfMonth+"/"+dueYear);
     }
 
+    //Saves the current note and optionally saves to JSON file if no internet
     void saveThisNote(){
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID};
@@ -151,12 +163,18 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
             myCV.put(ToDoProvider.TODO_TABLE_COL_DONE, doneInput.isChecked() ? 1 : 0);
             myCV.put(ToDoProvider.TODO_TABLE_COL_DATE, dueMs);
 
+            if (!isOnline(NoteActivity.this)) {
+                saveOffline(noteId, titleInput, contentInput, doneInput, dueMs);
+            }
+
             int didWork = getContentResolver().update(Uri.parse(ToDoProvider.CONTENT_URI + "/" + noteId), myCV, null, null);
             if (didWork == 1) {
                 long msFromNow = dueMs - System.currentTimeMillis();
                 if (!doneInput.isChecked()) {
                     scheduleNotification(NoteActivity.this, SystemClock.elapsedRealtime() + msFromNow,
                             noteId, String.valueOf(titleInput.getText()));
+                } else {
+                    cancelNotification(NoteActivity.this, noteId);
                 }
                 finish();
             }
@@ -165,6 +183,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //Schedules notification for the due date set
     public void scheduleNotification(Context context, long elapsedFutureMs, int noteId, String noteTitle) {
         if (elapsedFutureMs > SystemClock.elapsedRealtime()) {
             AlarmManager alarmMgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
@@ -176,6 +195,15 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //Cancels notification
+    void cancelNotification(Context context, int noteId) {
+        AlarmManager alarmMgr = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(context, AlarmReceiver.class);
+        PendingIntent alarmIntent = PendingIntent.getBroadcast(context, noteId, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        alarmMgr.cancel(alarmIntent);
+    }
+
+    //Deletes this note and returns to home activity
     void deleteThisNote(){
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID};
@@ -184,9 +212,10 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         if(cursor != null & cursor.getCount() > 0) {
             cursor.moveToFirst();
             cursor.move((int) noteIndex);
-            int newestId = cursor.getInt(0);
-            int didWork = getContentResolver().delete(Uri.parse(ToDoProvider.CONTENT_URI + "/" + newestId), null, null);
+            int noteId = cursor.getInt(0);
+            int didWork = getContentResolver().delete(Uri.parse(ToDoProvider.CONTENT_URI + "/" + noteId), null, null);
             if (didWork == 1) {
+                cancelNotification(NoteActivity.this, noteId);
                 finish();
             }
         } else{
@@ -194,6 +223,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //Shows user time picker and loads returned data
     void showTimePicker() {
         mOnTimeSetListener = new TimePickerDialog.OnTimeSetListener() {
             @Override
@@ -215,6 +245,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         mTimePickerDialog.show();
     }
 
+    //Shows user data picker and loads returned data
     void showDatePicker() {
         mOnDateSetListener = new DatePickerDialog.OnDateSetListener() {
             @Override
@@ -234,6 +265,39 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
                 dueYear,(dueMonth - 1),dueDayOfMonth);
         mDatePickerDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         mDatePickerDialog.show();
+    }
+
+    //Saves data to JSON file for later retrieval
+    private void saveOffline(int noteId, EditText titleInput, EditText contentInput, CheckBox doneInput, long dueMs){
+        JSONObject obj = new JSONObject();
+        try {
+            obj.put(ToDoProvider.TODO_TABLE_COL_ID, noteId);
+            obj.put(ToDoProvider.TODO_TABLE_COL_TITLE, String.valueOf(titleInput.getText()));
+            obj.put(ToDoProvider.TODO_TABLE_COL_CONTENT, String.valueOf(contentInput.getText()));
+            obj.put(ToDoProvider.TODO_TABLE_COL_DONE, doneInput.isChecked() ? 1 : 0);
+            obj.put(ToDoProvider.TODO_TABLE_COL_DATE, dueMs);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        File file = new File(this.getFilesDir(), "backupData");
+        try (FileWriter fileWriter = new FileWriter(file, true)){
+            fileWriter.write("\"" + noteId + "\":" + obj.toString() + ",");
+            Log.d("myDebug", "saveThisNote: " + obj.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Checks to see if internet is available
+    private boolean isOnline(Context context) {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo netInfo = cm.getActiveNetworkInfo();
+            return (netInfo != null && netInfo.isConnected());
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
 
