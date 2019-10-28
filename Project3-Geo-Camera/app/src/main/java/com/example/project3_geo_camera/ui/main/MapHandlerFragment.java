@@ -53,6 +53,7 @@ public class MapHandlerFragment extends Fragment implements GoogleMap.OnInfoWind
         View rootView = inflater.inflate(R.layout.map_fragment, container, false);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
 
+        //Creates map view
         mMapView = rootView.findViewById(R.id.mapView);
         mMapView.onCreate(savedInstanceState);
         mMapView.onResume();
@@ -63,6 +64,7 @@ public class MapHandlerFragment extends Fragment implements GoogleMap.OnInfoWind
             e.printStackTrace();
         }
 
+        //Enables google map on map view
         mMapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(GoogleMap mMap) {
@@ -77,7 +79,9 @@ public class MapHandlerFragment extends Fragment implements GoogleMap.OnInfoWind
         return rootView;
     }
 
+    //Gets all images in user gallery and loads them as markers on map
     public void loadImageMap(){
+        //Gets recent location for map centering
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
                     @Override
@@ -103,6 +107,7 @@ public class MapHandlerFragment extends Fragment implements GoogleMap.OnInfoWind
                 .query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, null,
                         null, MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC");
 
+        //Iterates through images and adds them if exif tags found
         Log.d("myDebug", "onMapReady: HERE");
         try {
             while (cursor.moveToNext()) {
@@ -167,6 +172,7 @@ public class MapHandlerFragment extends Fragment implements GoogleMap.OnInfoWind
         mMapView.onLowMemory();
     }
 
+    //Handles loading the image for viewing when an info window is clicked
     @Override
     public void onInfoWindowClick(final Marker marker) {
         String imagePath = (String) marker.getTag();

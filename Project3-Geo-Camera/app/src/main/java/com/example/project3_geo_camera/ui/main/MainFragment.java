@@ -1,7 +1,5 @@
 package com.example.project3_geo_camera.ui.main;
 
-import androidx.lifecycle.ViewModelProviders;
-
 import android.content.Intent;
 import android.location.Location;
 import android.media.ExifInterface;
@@ -24,14 +22,12 @@ import android.widget.Button;
 import com.example.project3_geo_camera.R;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -54,6 +50,7 @@ public class MainFragment extends Fragment {
 
         dateTimeFormat = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
 
+        //Handles take photo button on click
         Button takePhotoButton = rootView.findViewById(R.id.takePhotoButton);
         takePhotoButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -64,6 +61,7 @@ public class MainFragment extends Fragment {
                 dispatchTakePictureIntent();
             }
         });
+
         return rootView;
     }
 
@@ -74,23 +72,17 @@ public class MainFragment extends Fragment {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
 
+    //Handles coming back from camera intent
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            //Bundle extras = data.getExtras();
-            //Bitmap imageBitmap = (Bitmap) extras.get("data");
-            //mImageView.setImageBitmap(imageBitmap);
-
-            try {
-                galleryAddPic();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            galleryAddPic();
         }
     }
 
     String mCurrentPhotoPath;
 
+    //Creates the file for the image to go into
     private File createImageFile() throws IOException {
         File storageDir = Environment.getExternalStorageDirectory();
         File image = File.createTempFile("geo-camera", ".jpg", storageDir);
@@ -98,6 +90,7 @@ public class MainFragment extends Fragment {
         return image;
     }
 
+    //Creates and starts the take picture activity with implicit intent
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
@@ -114,7 +107,8 @@ public class MainFragment extends Fragment {
         }
     }
 
-    private void galleryAddPic() throws IOException {
+    //Add the taken image to the main gallery on the phone and adds exif data
+    private void galleryAddPic() {
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
                     @Override

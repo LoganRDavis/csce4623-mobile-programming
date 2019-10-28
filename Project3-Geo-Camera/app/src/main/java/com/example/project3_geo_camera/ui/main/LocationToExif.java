@@ -1,5 +1,6 @@
 package com.example.project3_geo_camera.ui.main;
 
+//Used to convert geo tag for exif use
 public class LocationToExif {
     private static StringBuilder sb = new StringBuilder(20);
 
