@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Project-4-Rest-Client</string>
+    <string name="title_activity_post">PostActivity</string>
+    <string name="title_activity_user">UserActivity</string>
+</resources>
