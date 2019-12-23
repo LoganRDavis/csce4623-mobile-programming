@@ -6,6 +6,6 @@ as well as hands-on programming experience on mobile devices with an emphasis on
 
 Student: Logan Davis
 
-Grade: ?
+Grade: A
 
 Taken as Senior in 2019
